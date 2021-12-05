@@ -2,7 +2,7 @@ package application
 
 import (
 	"context"
-	"github.com/google/uuid"
+	"github.com/segmentio/ksuid"
 	"net/http"
 )
 
@@ -16,7 +16,7 @@ const (
 
 func ContextMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		requestID := uuid.New().String()
+		requestID := ksuid.New().String()
 
 		http.SetCookie(w, &http.Cookie{
 			Name:     cookieRequestID,

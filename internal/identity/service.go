@@ -3,8 +3,8 @@ package identity
 import (
 	"context"
 	"github.com/damejeras/auth/api"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/segmentio/ksuid"
 	"net/url"
 )
 
@@ -20,7 +20,7 @@ func NewService(challengeRepository ChallengeRepository, verificationRepository 
 	}
 }
 
-func (s *service) Verify(ctx context.Context, request api.VerifyRequest) (*api.VerifyResponse, error) {
+func (s *service) Authenticate(ctx context.Context, request api.AuthenticateRequest) (*api.AuthenticateResponse, error) {
 	challenge, err := s.challengeRepository.RetrievePendingByID(ctx, request.ChallengeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "find challenge")
@@ -30,12 +30,19 @@ func (s *service) Verify(ctx context.Context, request api.VerifyRequest) (*api.V
 		return nil, errors.New("challenge doesn't exist")
 	}
 
+	originalURL, err := url.Parse(challenge.OriginURL)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse original uri")
+	}
+
 	verification := Verification{
 		ChallengeID:   challenge.ID,
-		LoginVerifier: uuid.New().String(),
+		LoginVerifier: ksuid.New().String(),
 		RequestID:     challenge.RequestID,
 		Data: Data{
+			ClientID:  originalURL.Query().Get("client_id"),
 			SubjectID: request.SubjectID,
+			OriginURL: challenge.OriginURL,
 		},
 	}
 
@@ -43,7 +50,7 @@ func (s *service) Verify(ctx context.Context, request api.VerifyRequest) (*api.V
 		return nil, errors.Wrap(err, "store verification")
 	}
 
-	requestURI, err := url.Parse(challenge.RequestURL)
+	requestURI, err := url.Parse(challenge.OriginURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse request url")
 	}
@@ -57,7 +64,7 @@ func (s *service) Verify(ctx context.Context, request api.VerifyRequest) (*api.V
 
 	requestURI.RawQuery = urlValues.Encode()
 
-	return &api.VerifyResponse{
+	return &api.AuthenticateResponse{
 		RedirectURL: requestURI.String(),
 	}, nil
 }

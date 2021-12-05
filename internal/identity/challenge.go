@@ -3,22 +3,22 @@ package identity
 import (
 	"context"
 	"github.com/damejeras/auth/internal/application"
-	"github.com/google/uuid"
+	"github.com/segmentio/ksuid"
 	"net/http"
 )
 
 type Challenge struct {
-	ID         string
-	RequestID  string
-	RequestURL string
+	ID        string
+	RequestID string
+	OriginURL string
 }
 
 func BuildChallenge(r *http.Request) *Challenge {
 	return &Challenge{
-		ID:        uuid.New().String(),
+		ID:        ksuid.New().String(),
 		RequestID: r.Context().Value(application.ContextRequestID).(string),
 		// TODO: use https
-		RequestURL: "http://" + r.Host + r.URL.RequestURI(),
+		OriginURL: "http://" + r.Host + r.URL.RequestURI(),
 	}
 }
 

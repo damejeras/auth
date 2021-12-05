@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/damejeras/auth/internal/admin"
 	"github.com/damejeras/auth/internal/client"
+	"github.com/damejeras/auth/internal/consent"
 	"github.com/damejeras/auth/internal/identity"
 	"github.com/damejeras/auth/internal/oauth2"
 	"github.com/damejeras/auth/internal/persistence"
@@ -30,7 +31,15 @@ func InitializeOauth2Server() (*server.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	identityManager := identity.NewManager(challengeRepository, verificationRepository)
+	consentChallengeRepository, err := persistence.NewConsentChallengeRepository(dynamoDB)
+	if err != nil {
+		return nil, err
+	}
+	grantRepository, err := persistence.NewConsentGrantRepository(dynamoDB)
+	if err != nil {
+		return nil, err
+	}
+	identityManager := identity.NewManager(challengeRepository, verificationRepository, consentChallengeRepository, grantRepository)
 	serverServer := oauth2.NewServer(manager, identityManager)
 	return serverServer, nil
 }
@@ -46,6 +55,15 @@ func InitializeRPCServer() (*otohttp.Server, error) {
 		return nil, err
 	}
 	identityService := identity.NewService(challengeRepository, verificationRepository)
-	otohttpServer := admin.NewServer(identityService)
+	consentChallengeRepository, err := persistence.NewConsentChallengeRepository(dynamoDB)
+	if err != nil {
+		return nil, err
+	}
+	grantRepository, err := persistence.NewConsentGrantRepository(dynamoDB)
+	if err != nil {
+		return nil, err
+	}
+	consentService := consent.NewService(consentChallengeRepository, grantRepository)
+	otohttpServer := admin.NewServer(identityService, consentService)
 	return otohttpServer, nil
 }

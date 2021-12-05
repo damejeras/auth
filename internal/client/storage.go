@@ -6,7 +6,7 @@ import (
 )
 
 func NewClientStorage() *store.ClientStore {
-	// for testing purposes, should be replaced with proper implementation
+	// TODO: replace with proper implementation
 	clientStore := store.NewClientStore()
 	clientStore.Set("test", &models.Client{
 		ID:     "test",

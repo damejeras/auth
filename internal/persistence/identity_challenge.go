@@ -27,9 +27,9 @@ func (r *identityChallengeRepository) Store(ctx context.Context, challenge *iden
 	_, err := r.db.PutItemWithContext(ctx, &dynamodb.PutItemInput{
 		TableName: aws.String(tableIdentityChallenge),
 		Item: map[string]*dynamodb.AttributeValue{
-			"ID":         {S: aws.String(challenge.ID)},
-			"RequestID":  {S: aws.String(challenge.RequestID)},
-			"RequestURL": {S: aws.String(challenge.RequestURL)},
+			"ID":        {S: aws.String(challenge.ID)},
+			"RequestID": {S: aws.String(challenge.RequestID)},
+			"OriginURL": {S: aws.String(challenge.OriginURL)},
 		},
 	})
 

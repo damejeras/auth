@@ -9,8 +9,43 @@ import (
 	"github.com/pacedotdev/oto/otohttp"
 )
 
+type ConsentService interface {
+	GrantConsent(context.Context, GrantConsentRequest) (*GrantConsentResponse, error)
+}
+
 type IdentityService interface {
-	Verify(context.Context, VerifyRequest) (*VerifyResponse, error)
+	Authenticate(context.Context, AuthenticateRequest) (*AuthenticateResponse, error)
+}
+
+type consentServiceServer struct {
+	server         *otohttp.Server
+	consentService ConsentService
+}
+
+// Register adds the ConsentService to the otohttp.Server.
+func RegisterConsentService(server *otohttp.Server, consentService ConsentService) {
+	handler := &consentServiceServer{
+		server:         server,
+		consentService: consentService,
+	}
+	server.Register("ConsentService", "GrantConsent", handler.handleGrantConsent)
+}
+
+func (s *consentServiceServer) handleGrantConsent(w http.ResponseWriter, r *http.Request) {
+	var request GrantConsentRequest
+	if err := otohttp.Decode(r, &request); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	response, err := s.consentService.GrantConsent(r.Context(), request)
+	if err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	if err := otohttp.Encode(w, r, http.StatusOK, response); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
 }
 
 type identityServiceServer struct {
@@ -24,16 +59,16 @@ func RegisterIdentityService(server *otohttp.Server, identityService IdentitySer
 		server:          server,
 		identityService: identityService,
 	}
-	server.Register("IdentityService", "Verify", handler.handleVerify)
+	server.Register("IdentityService", "Authenticate", handler.handleAuthenticate)
 }
 
-func (s *identityServiceServer) handleVerify(w http.ResponseWriter, r *http.Request) {
-	var request VerifyRequest
+func (s *identityServiceServer) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
+	var request AuthenticateRequest
 	if err := otohttp.Decode(r, &request); err != nil {
 		s.server.OnErr(w, r, err)
 		return
 	}
-	response, err := s.identityService.Verify(r.Context(), request)
+	response, err := s.identityService.Authenticate(r.Context(), request)
 	if err != nil {
 		s.server.OnErr(w, r, err)
 		return
@@ -44,12 +79,23 @@ func (s *identityServiceServer) handleVerify(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-type VerifyRequest struct {
+type AuthenticateRequest struct {
 	ChallengeID string `json:"challengeID"`
 	SubjectID   string `json:"subjectID"`
 }
 
-type VerifyResponse struct {
+type AuthenticateResponse struct {
+	RedirectURL string `json:"redirectURL"`
+	// Error is string explaining what went wrong. Empty if everything was fine.
+	Error string `json:"error,omitempty"`
+}
+
+type GrantConsentRequest struct {
+	ChallengeID string   `json:"challengeID"`
+	Scope       []string `json:"scope"`
+}
+
+type GrantConsentResponse struct {
 	RedirectURL string `json:"redirectURL"`
 	// Error is string explaining what went wrong. Empty if everything was fine.
 	Error string `json:"error,omitempty"`

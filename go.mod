@@ -16,6 +16,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tidwall/btree v0.6.1 // indirect
 	github.com/tidwall/buntdb v1.2.7 // indirect

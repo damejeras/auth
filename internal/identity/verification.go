@@ -9,7 +9,9 @@ type Verification struct {
 }
 
 type Data struct {
+	ClientID  string
 	SubjectID string
+	OriginURL string
 }
 
 type VerificationRepository interface {

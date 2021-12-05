@@ -1,14 +1,27 @@
 package admin
 
 type IdentityService interface {
-	Verify(VerifyRequest) VerifyResponse
+	Authenticate(AuthenticateRequest) AuthenticateResponse
 }
 
-type VerifyRequest struct {
+type AuthenticateRequest struct {
 	ChallengeID string
 	SubjectID   string
 }
 
-type VerifyResponse struct {
+type AuthenticateResponse struct {
+	RedirectURL string
+}
+
+type ConsentService interface {
+	GrantConsent(GrantConsentRequest) GrantConsentResponse
+}
+
+type GrantConsentRequest struct {
+	ChallengeID string
+	Scope       []string
+}
+
+type GrantConsentResponse struct {
 	RedirectURL string
 }

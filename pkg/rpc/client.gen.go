@@ -42,28 +42,28 @@ func New(remoteHost string) *Client {
 	return c
 }
 
-type IdentityService struct {
+type ConsentService struct {
 	client *Client
 }
 
-// NewIdentityService makes a new client for accessing IdentityService services.
-func NewIdentityService(client *Client) *IdentityService {
-	return &IdentityService{
+// NewConsentService makes a new client for accessing ConsentService services.
+func NewConsentService(client *Client) *ConsentService {
+	return &ConsentService{
 		client: client,
 	}
 }
 
-func (s *IdentityService) Verify(ctx context.Context, r VerifyRequest) (*VerifyResponse, error) {
+func (s *ConsentService) GrantConsent(ctx context.Context, r GrantConsentRequest) (*GrantConsentResponse, error) {
 	requestBodyBytes, err := json.Marshal(r)
 	if err != nil {
-		return nil, errors.Wrap(err, "IdentityService.Verify: marshal VerifyRequest")
+		return nil, errors.Wrap(err, "ConsentService.GrantConsent: marshal GrantConsentRequest")
 	}
-	url := s.client.RemoteHost + "IdentityService.Verify"
+	url := s.client.RemoteHost + "ConsentService.GrantConsent"
 	s.client.Debug(fmt.Sprintf("POST %s", url))
 	s.client.Debug(fmt.Sprintf(">> %s", string(requestBodyBytes)))
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(requestBodyBytes))
 	if err != nil {
-		return nil, errors.Wrap(err, "IdentityService.Verify: NewRequest")
+		return nil, errors.Wrap(err, "ConsentService.GrantConsent: NewRequest")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
@@ -77,44 +77,121 @@ func (s *IdentityService) Verify(ctx context.Context, r VerifyRequest) (*VerifyR
 	}
 	resp, err := s.client.HTTPClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "IdentityService.Verify")
+		return nil, errors.Wrap(err, "ConsentService.GrantConsent")
 	}
 	defer resp.Body.Close()
 	var response struct {
-		VerifyResponse
+		GrantConsentResponse
 		Error string
 	}
 	var bodyReader io.Reader = resp.Body
 	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
 		decodedBody, err := gzip.NewReader(resp.Body)
 		if err != nil {
-			return nil, errors.Wrap(err, "IdentityService.Verify: new gzip reader")
+			return nil, errors.Wrap(err, "ConsentService.GrantConsent: new gzip reader")
 		}
 		defer decodedBody.Close()
 		bodyReader = decodedBody
 	}
 	respBodyBytes, err := ioutil.ReadAll(bodyReader)
 	if err != nil {
-		return nil, errors.Wrap(err, "IdentityService.Verify: read response body")
+		return nil, errors.Wrap(err, "ConsentService.GrantConsent: read response body")
 	}
 	if err := json.Unmarshal(respBodyBytes, &response); err != nil {
 		if resp.StatusCode != http.StatusOK {
-			return nil, errors.Errorf("IdentityService.Verify: (%d) %v", resp.StatusCode, string(respBodyBytes))
+			return nil, errors.Errorf("ConsentService.GrantConsent: (%d) %v", resp.StatusCode, string(respBodyBytes))
 		}
 		return nil, err
 	}
 	if response.Error != "" {
 		return nil, errors.New(response.Error)
 	}
-	return &response.VerifyResponse, nil
+	return &response.GrantConsentResponse, nil
 }
 
-type VerifyRequest struct {
+type IdentityService struct {
+	client *Client
+}
+
+// NewIdentityService makes a new client for accessing IdentityService services.
+func NewIdentityService(client *Client) *IdentityService {
+	return &IdentityService{
+		client: client,
+	}
+}
+
+func (s *IdentityService) Authenticate(ctx context.Context, r AuthenticateRequest) (*AuthenticateResponse, error) {
+	requestBodyBytes, err := json.Marshal(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "IdentityService.Authenticate: marshal AuthenticateRequest")
+	}
+	url := s.client.RemoteHost + "IdentityService.Authenticate"
+	s.client.Debug(fmt.Sprintf("POST %s", url))
+	s.client.Debug(fmt.Sprintf(">> %s", string(requestBodyBytes)))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(requestBodyBytes))
+	if err != nil {
+		return nil, errors.Wrap(err, "IdentityService.Authenticate: NewRequest")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+	req = req.WithContext(ctx)
+	if s.client.BeforeRequest != nil {
+		err = s.client.BeforeRequest(req)
+		if err != nil {
+			// don't wrap this error, it belongs to the user
+			return nil, err
+		}
+	}
+	resp, err := s.client.HTTPClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "IdentityService.Authenticate")
+	}
+	defer resp.Body.Close()
+	var response struct {
+		AuthenticateResponse
+		Error string
+	}
+	var bodyReader io.Reader = resp.Body
+	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
+		decodedBody, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, errors.Wrap(err, "IdentityService.Authenticate: new gzip reader")
+		}
+		defer decodedBody.Close()
+		bodyReader = decodedBody
+	}
+	respBodyBytes, err := ioutil.ReadAll(bodyReader)
+	if err != nil {
+		return nil, errors.Wrap(err, "IdentityService.Authenticate: read response body")
+	}
+	if err := json.Unmarshal(respBodyBytes, &response); err != nil {
+		if resp.StatusCode != http.StatusOK {
+			return nil, errors.Errorf("IdentityService.Authenticate: (%d) %v", resp.StatusCode, string(respBodyBytes))
+		}
+		return nil, err
+	}
+	if response.Error != "" {
+		return nil, errors.New(response.Error)
+	}
+	return &response.AuthenticateResponse, nil
+}
+
+type AuthenticateRequest struct {
 	ChallengeID string `json:"challengeID"`
 
 	SubjectID string `json:"subjectID"`
 }
 
-type VerifyResponse struct {
+type AuthenticateResponse struct {
+	RedirectURL string `json:"redirectURL"`
+}
+
+type GrantConsentRequest struct {
+	ChallengeID string `json:"challengeID"`
+
+	Scope []string `json:"scope"`
+}
+
+type GrantConsentResponse struct {
 	RedirectURL string `json:"redirectURL"`
 }
