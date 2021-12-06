@@ -10,6 +10,7 @@ import (
 
 const (
 	paramConsentChallenge = "consent_challenge"
+	paramConsentVerifier  = "consent_verifier"
 )
 
 type service struct {
@@ -32,9 +33,10 @@ func (s *service) GrantConsent(ctx context.Context, request api.GrantConsentRequ
 
 	grant := Grant{
 		ID:          ksuid.New().String(),
-		ClientID:    challenge.ID,
+		ClientID:    challenge.ClientID,
 		SubjectID:   challenge.SubjectID,
 		ChallengeID: challenge.ID,
+		RequestID:   challenge.RequestID,
 		OriginURL:   challenge.OriginURL,
 		Scope:       request.Scope,
 	}
@@ -54,11 +56,28 @@ func (s *service) GrantConsent(ctx context.Context, request api.GrantConsentRequ
 		return nil, errors.Wrap(err, "parse url values")
 	}
 
-	urlValues.Add(paramConsentChallenge, grant.ID)
+	urlValues.Add(paramConsentVerifier, grant.ID)
 
 	requestURI.RawQuery = urlValues.Encode()
 
 	return &api.GrantConsentResponse{
 		RedirectURL: requestURI.String(),
+	}, nil
+}
+
+func (s *service) ShowConsentChallenge(ctx context.Context, request api.ShowConsentChallengeRequest) (*api.ShowConsentChallengeResponse, error) {
+	challenge, err := s.challengeRepository.FindByID(ctx, request.ConsentChallenge)
+	if err != nil {
+		return nil, errors.Wrap(err, "find consent challenge")
+	}
+
+	if challenge == nil {
+		return nil, errors.Wrap(err, "challenge doesnt exist")
+	}
+
+	return &api.ShowConsentChallengeResponse{
+		ClientID:       challenge.ClientID,
+		SubjectID:      challenge.SubjectID,
+		RequestedScope: challenge.Data.Scope,
 	}, nil
 }

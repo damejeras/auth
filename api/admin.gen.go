@@ -11,6 +11,7 @@ import (
 
 type ConsentService interface {
 	GrantConsent(context.Context, GrantConsentRequest) (*GrantConsentResponse, error)
+	ShowConsentChallenge(context.Context, ShowConsentChallengeRequest) (*ShowConsentChallengeResponse, error)
 }
 
 type IdentityService interface {
@@ -29,6 +30,7 @@ func RegisterConsentService(server *otohttp.Server, consentService ConsentServic
 		consentService: consentService,
 	}
 	server.Register("ConsentService", "GrantConsent", handler.handleGrantConsent)
+	server.Register("ConsentService", "ShowConsentChallenge", handler.handleShowConsentChallenge)
 }
 
 func (s *consentServiceServer) handleGrantConsent(w http.ResponseWriter, r *http.Request) {
@@ -38,6 +40,23 @@ func (s *consentServiceServer) handleGrantConsent(w http.ResponseWriter, r *http
 		return
 	}
 	response, err := s.consentService.GrantConsent(r.Context(), request)
+	if err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	if err := otohttp.Encode(w, r, http.StatusOK, response); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+}
+
+func (s *consentServiceServer) handleShowConsentChallenge(w http.ResponseWriter, r *http.Request) {
+	var request ShowConsentChallengeRequest
+	if err := otohttp.Decode(r, &request); err != nil {
+		s.server.OnErr(w, r, err)
+		return
+	}
+	response, err := s.consentService.ShowConsentChallenge(r.Context(), request)
 	if err != nil {
 		s.server.OnErr(w, r, err)
 		return
@@ -97,6 +116,18 @@ type GrantConsentRequest struct {
 
 type GrantConsentResponse struct {
 	RedirectURL string `json:"redirectURL"`
+	// Error is string explaining what went wrong. Empty if everything was fine.
+	Error string `json:"error,omitempty"`
+}
+
+type ShowConsentChallengeRequest struct {
+	ConsentChallenge string `json:"consentChallenge"`
+}
+
+type ShowConsentChallengeResponse struct {
+	ClientID       string   `json:"clientID"`
+	SubjectID      string   `json:"subjectID"`
+	RequestedScope []string `json:"requestedScope"`
 	// Error is string explaining what went wrong. Empty if everything was fine.
 	Error string `json:"error,omitempty"`
 }

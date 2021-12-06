@@ -1,11 +1,12 @@
 package identity
 
 import (
-	"github.com/damejeras/auth/internal/consent"
-	"github.com/segmentio/ksuid"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/damejeras/auth/internal/consent"
+	"github.com/segmentio/ksuid"
 
 	"github.com/damejeras/auth/internal/application"
 	"github.com/go-oauth2/oauth2/v4/errors"
@@ -120,7 +121,7 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 					ID:        ksuid.New().String(),
 					ClientID:  verification.Data.ClientID,
 					SubjectID: verification.Data.SubjectID,
-					RequestID: application.GetRequestID(r),
+					RequestID: r.Context().Value(application.ContextRequestID).(string),
 					OriginURL: verification.Data.OriginURL,
 					Data: consent.ChallengeData{
 						Scope: allScopes,
@@ -160,7 +161,7 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 						ID:        ksuid.New().String(),
 						ClientID:  verification.Data.ClientID,
 						SubjectID: verification.Data.SubjectID,
-						RequestID: application.GetRequestID(r),
+						RequestID: r.Context().Value(application.ContextRequestID).(string),
 						OriginURL: verification.Data.OriginURL,
 						Data: consent.ChallengeData{
 							Scope: allScopes,

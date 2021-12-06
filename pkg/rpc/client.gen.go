@@ -109,6 +109,62 @@ func (s *ConsentService) GrantConsent(ctx context.Context, r GrantConsentRequest
 	return &response.GrantConsentResponse, nil
 }
 
+func (s *ConsentService) ShowConsentChallenge(ctx context.Context, r ShowConsentChallengeRequest) (*ShowConsentChallengeResponse, error) {
+	requestBodyBytes, err := json.Marshal(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "ConsentService.ShowConsentChallenge: marshal ShowConsentChallengeRequest")
+	}
+	url := s.client.RemoteHost + "ConsentService.ShowConsentChallenge"
+	s.client.Debug(fmt.Sprintf("POST %s", url))
+	s.client.Debug(fmt.Sprintf(">> %s", string(requestBodyBytes)))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(requestBodyBytes))
+	if err != nil {
+		return nil, errors.Wrap(err, "ConsentService.ShowConsentChallenge: NewRequest")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+	req = req.WithContext(ctx)
+	if s.client.BeforeRequest != nil {
+		err = s.client.BeforeRequest(req)
+		if err != nil {
+			// don't wrap this error, it belongs to the user
+			return nil, err
+		}
+	}
+	resp, err := s.client.HTTPClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "ConsentService.ShowConsentChallenge")
+	}
+	defer resp.Body.Close()
+	var response struct {
+		ShowConsentChallengeResponse
+		Error string
+	}
+	var bodyReader io.Reader = resp.Body
+	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
+		decodedBody, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, errors.Wrap(err, "ConsentService.ShowConsentChallenge: new gzip reader")
+		}
+		defer decodedBody.Close()
+		bodyReader = decodedBody
+	}
+	respBodyBytes, err := ioutil.ReadAll(bodyReader)
+	if err != nil {
+		return nil, errors.Wrap(err, "ConsentService.ShowConsentChallenge: read response body")
+	}
+	if err := json.Unmarshal(respBodyBytes, &response); err != nil {
+		if resp.StatusCode != http.StatusOK {
+			return nil, errors.Errorf("ConsentService.ShowConsentChallenge: (%d) %v", resp.StatusCode, string(respBodyBytes))
+		}
+		return nil, err
+	}
+	if response.Error != "" {
+		return nil, errors.New(response.Error)
+	}
+	return &response.ShowConsentChallengeResponse, nil
+}
+
 type IdentityService struct {
 	client *Client
 }
@@ -194,4 +250,16 @@ type GrantConsentRequest struct {
 
 type GrantConsentResponse struct {
 	RedirectURL string `json:"redirectURL"`
+}
+
+type ShowConsentChallengeRequest struct {
+	ConsentChallenge string `json:"consentChallenge"`
+}
+
+type ShowConsentChallengeResponse struct {
+	ClientID string `json:"clientID"`
+
+	SubjectID string `json:"subjectID"`
+
+	RequestedScope []string `json:"requestedScope"`
 }

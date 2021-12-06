@@ -14,7 +14,18 @@ type AuthenticateResponse struct {
 }
 
 type ConsentService interface {
+	ShowConsentChallenge(ShowConsentChallengeRequest) ShowConsentChallengeResponse
 	GrantConsent(GrantConsentRequest) GrantConsentResponse
+}
+
+type ShowConsentChallengeRequest struct {
+	ConsentChallenge string
+}
+
+type ShowConsentChallengeResponse struct {
+	ClientID       string
+	SubjectID      string
+	RequestedScope []string
 }
 
 type GrantConsentRequest struct {

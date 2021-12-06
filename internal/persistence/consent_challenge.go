@@ -17,8 +17,8 @@ type consentChallengeRepository struct {
 }
 
 type basicConsentChallenge struct {
-	ID, ClientID, SubjectID, RequestID, RequestURL string
-	Data                                           []byte
+	ID, ClientID, SubjectID, RequestID, OriginURL string
+	Data                                          []byte
 }
 
 func NewConsentChallengeRepository(db *dynamodb.DynamoDB) (consent.ChallengeRepository, error) {
@@ -80,7 +80,7 @@ func (r *consentChallengeRepository) FindByID(ctx context.Context, id string) (*
 		ClientID:  basic.ClientID,
 		SubjectID: basic.SubjectID,
 		RequestID: basic.RequestID,
-		OriginURL: basic.RequestURL,
+		OriginURL: basic.OriginURL,
 		Data:      data,
 	}, nil
 }

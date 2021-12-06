@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -170,8 +171,7 @@ func migrateConsentGrant(db *dynamodb.DynamoDB) error {
 					{AttributeName: aws.String("SubjectID"), KeyType: aws.String("RANGE")},
 				},
 				Projection: &dynamodb.Projection{
-					NonKeyAttributes: []*string{aws.String("ClientID"), aws.String("SubjectID")},
-					ProjectionType:   aws.String("INCLUDE"),
+					ProjectionType: aws.String("ALL"),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(5),

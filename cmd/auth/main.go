@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/damejeras/auth/internal/application"
-	"github.com/go-oauth2/oauth2/v4/server"
-	"github.com/pacedotdev/oto/otohttp"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/damejeras/auth/internal/application"
+	"github.com/go-oauth2/oauth2/v4/server"
+	"github.com/pacedotdev/oto/otohttp"
 )
 
 func main() {
