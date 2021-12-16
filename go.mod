@@ -5,18 +5,18 @@ go 1.17
 require (
 	github.com/aws/aws-sdk-go v1.42.13
 	github.com/go-oauth2/oauth2/v4 v4.4.2
-	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/pacedotdev/oto/otohttp v0.8.0
 	github.com/pkg/errors v0.9.1
+	github.com/segmentio/ksuid v1.0.4
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 )
 
 require (
 	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tidwall/btree v0.6.1 // indirect
 	github.com/tidwall/buntdb v1.2.7 // indirect

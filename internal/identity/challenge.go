@@ -2,27 +2,29 @@ package identity
 
 import (
 	"context"
-	"github.com/damejeras/auth/internal/application"
-	"github.com/segmentio/ksuid"
-	"net/http"
+	"github.com/damejeras/auth/internal/integrity"
+	"time"
 )
 
 type Challenge struct {
 	ID        string
-	RequestID string
-	OriginURL string
+	ClientID  string
+	Verifier  string
+	Identity  *Identity
+	Footprint *integrity.Footprint
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
-func BuildChallenge(r *http.Request) *Challenge {
-	return &Challenge{
-		ID:        ksuid.New().String(),
-		RequestID: r.Context().Value(application.ContextRequestID).(string),
-		// TODO: use https
-		OriginURL: "http://" + r.Host + r.URL.RequestURI(),
-	}
+type Identity struct {
+	SubjectID string
 }
 
 type ChallengeRepository interface {
 	Store(context.Context, *Challenge) error
-	RetrievePendingByID(context.Context, string) (*Challenge, error)
+	UpdateWithAuthorization(context.Context, *Challenge) error
+	Delete(context.Context, *Challenge) error
+	FindByID(context.Context, string) (*Challenge, error)
+	FindByVerifier(context.Context, string) (*Challenge, error)
 }

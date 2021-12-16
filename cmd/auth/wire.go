@@ -5,7 +5,6 @@ package main
 import (
 	"github.com/damejeras/auth/internal/admin"
 	"github.com/damejeras/auth/internal/client"
-	"github.com/damejeras/auth/internal/consent"
 	"github.com/damejeras/auth/internal/identity"
 	"github.com/damejeras/auth/internal/oauth2"
 	"github.com/damejeras/auth/internal/persistence"
@@ -22,9 +21,8 @@ func InitializeOauth2Server() (*server.Server, error) {
 		identity.NewManager,
 		persistence.NewDynamoDBClient,
 		persistence.NewIdentityChallengeRepository,
-		persistence.NewIdentityVerificationRepository,
 		persistence.NewConsentChallengeRepository,
-		persistence.NewConsentGrantRepository,
+		persistence.NewConsentRepository,
 	)
 
 	return nil, nil
@@ -33,12 +31,11 @@ func InitializeOauth2Server() (*server.Server, error) {
 func InitializeRPCServer() (*otohttp.Server, error) {
 	wire.Build(
 		identity.NewService,
-		consent.NewService,
+		identity.NewConsentService,
 		persistence.NewDynamoDBClient,
 		persistence.NewIdentityChallengeRepository,
-		persistence.NewIdentityVerificationRepository,
-		persistence.NewConsentGrantRepository,
 		persistence.NewConsentChallengeRepository,
+		persistence.NewConsentRepository,
 		admin.NewServer,
 	)
 

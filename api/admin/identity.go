@@ -1,5 +1,9 @@
 package admin
 
+import (
+	"time"
+)
+
 type IdentityService interface {
 	Authenticate(AuthenticateRequest) AuthenticateResponse
 }
@@ -23,14 +27,17 @@ type ShowConsentChallengeRequest struct {
 }
 
 type ShowConsentChallengeResponse struct {
-	ClientID       string
-	SubjectID      string
-	RequestedScope []string
+	ClientID        string
+	SubjectID       string
+	RequestedScopes []string
+	MissingScopes   []string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type GrantConsentRequest struct {
 	ChallengeID string
-	Scope       []string
+	Scopes      []string
 }
 
 type GrantConsentResponse struct {

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-proto:
+spec:
 	oto -template ./api/templates/server.go.plush \
 		-out ./api/admin.gen.go \
 		-ignore Ignorer \

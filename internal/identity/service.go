@@ -4,67 +4,50 @@ import (
 	"context"
 	"github.com/damejeras/auth/api"
 	"github.com/pkg/errors"
-	"github.com/segmentio/ksuid"
 	"net/url"
 )
 
 type service struct {
-	challengeRepository    ChallengeRepository
-	verificationRepository VerificationRepository
+	challengeRepository ChallengeRepository
 }
 
-func NewService(challengeRepository ChallengeRepository, verificationRepository VerificationRepository) api.IdentityService {
+func NewService(challengeRepository ChallengeRepository) api.IdentityService {
 	return &service{
-		challengeRepository:    challengeRepository,
-		verificationRepository: verificationRepository,
+		challengeRepository: challengeRepository,
 	}
 }
 
 func (s *service) Authenticate(ctx context.Context, request api.AuthenticateRequest) (*api.AuthenticateResponse, error) {
-	challenge, err := s.challengeRepository.RetrievePendingByID(ctx, request.ChallengeID)
+	challenge, err := s.challengeRepository.FindByID(ctx, request.ChallengeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "find challenge")
 	}
 
-	if challenge == nil {
-		return nil, errors.New("challenge doesn't exist")
+	if challenge == nil || challenge.Identity.SubjectID != "" {
+		return nil, errors.New("invalid challenge")
 	}
 
-	originalURL, err := url.Parse(challenge.OriginURL)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse original uri")
+	challenge.Identity = &Identity{SubjectID: request.SubjectID}
+
+	if err := s.challengeRepository.UpdateWithAuthorization(ctx, challenge); err != nil {
+		return nil, errors.Wrap(err, "update challenge")
 	}
 
-	verification := Verification{
-		ChallengeID:   challenge.ID,
-		LoginVerifier: ksuid.New().String(),
-		RequestID:     challenge.RequestID,
-		Data: Data{
-			ClientID:  originalURL.Query().Get("client_id"),
-			SubjectID: request.SubjectID,
-			OriginURL: challenge.OriginURL,
-		},
-	}
-
-	if err := s.verificationRepository.Store(ctx, &verification); err != nil {
-		return nil, errors.Wrap(err, "store verification")
-	}
-
-	requestURI, err := url.Parse(challenge.OriginURL)
+	requestURL, err := url.Parse(challenge.Footprint.RequestURL)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse request url")
 	}
 
-	urlValues, err := url.ParseQuery(requestURI.RawQuery)
+	urlValues, err := url.ParseQuery(requestURL.RawQuery)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse url values")
 	}
 
-	urlValues.Add(paramLoginVerifier, verification.ChallengeID)
+	urlValues.Add(paramLoginVerifier, challenge.Verifier)
 
-	requestURI.RawQuery = urlValues.Encode()
+	requestURL.RawQuery = urlValues.Encode()
 
 	return &api.AuthenticateResponse{
-		RedirectURL: requestURI.String(),
+		RedirectURL: requestURL.String(),
 	}, nil
 }
