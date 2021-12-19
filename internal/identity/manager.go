@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"github.com/damejeras/auth/internal/app"
 	"github.com/damejeras/auth/internal/consent"
 	"github.com/damejeras/auth/internal/integrity"
 	"github.com/go-oauth2/oauth2/v4/errors"
@@ -32,10 +33,11 @@ func NewManager(
 	challengeRepository ChallengeRepository,
 	consentChallengeRepository consent.ChallengeRepository,
 	consentRepository consent.Repository,
+	cfg *app.Config,
 ) *Manager {
 	return &Manager{
-		identityProviderURL:        "http://localhost:8888/auth",
-		consentProviderURL:         "http://localhost:8888/consent",
+		identityProviderURL:        cfg.IdentityProvider.Address,
+		consentProviderURL:         cfg.ConsentProvider.Address,
 		challengeRepository:        challengeRepository,
 		consentChallengeRepository: consentChallengeRepository,
 		consentRepository:          consentRepository,

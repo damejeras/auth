@@ -5,14 +5,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/damejeras/auth/internal/app"
 	"log"
 )
 
-func NewDynamoDBClient() *dynamodb.DynamoDB {
+func NewDynamoDBClient(cfg *app.Config) *dynamodb.DynamoDB {
 	awsConfig := aws.NewConfig()
-	awsConfig.Region = aws.String("eu-west-1")
-	awsConfig.Endpoint = aws.String("http://localhost:8000")
-	awsConfig.Credentials = credentials.NewStaticCredentials("123", "123", "123")
+	awsConfig.Region = aws.String(cfg.AWS.Region)
+	awsConfig.Endpoint = aws.String(cfg.AWS.Endpoint)
+	awsConfig.Credentials = credentials.NewStaticCredentials(cfg.AWS.ID, cfg.AWS.Secret, "")
 
 	awsSession, err := session.NewSession(awsConfig)
 	if err != nil {

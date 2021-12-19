@@ -8,19 +8,25 @@ package main
 
 import (
 	"github.com/damejeras/auth/internal/admin"
+	"github.com/damejeras/auth/internal/app"
 	"github.com/damejeras/auth/internal/client"
 	"github.com/damejeras/auth/internal/consent"
 	"github.com/damejeras/auth/internal/identity"
 	"github.com/damejeras/auth/internal/oauth2"
 	"github.com/damejeras/auth/internal/persistence"
 	"github.com/go-oauth2/oauth2/v4/server"
+	"github.com/kkyr/fig"
 	"github.com/pacedotdev/oto/otohttp"
 )
 
 // Injectors from wire.go:
 
 func InitializeOauth2Server() (*server.Server, error) {
-	dynamoDB := persistence.NewDynamoDBClient()
+	appConfig, err := loadConfig()
+	if err != nil {
+		return nil, err
+	}
+	dynamoDB := persistence.NewDynamoDBClient(appConfig)
 	clientStore := client.NewClientStorage()
 	manager := oauth2.NewManager(dynamoDB, clientStore)
 	challengeRepository, err := persistence.NewIdentityChallengeRepository(dynamoDB)
@@ -35,13 +41,17 @@ func InitializeOauth2Server() (*server.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	identityManager := identity.NewManager(challengeRepository, consentChallengeRepository, repository)
+	identityManager := identity.NewManager(challengeRepository, consentChallengeRepository, repository, appConfig)
 	serverServer := oauth2.NewServer(manager, identityManager)
 	return serverServer, nil
 }
 
 func InitializeRPCServer() (*otohttp.Server, error) {
-	dynamoDB := persistence.NewDynamoDBClient()
+	appConfig, err := loadConfig()
+	if err != nil {
+		return nil, err
+	}
+	dynamoDB := persistence.NewDynamoDBClient(appConfig)
 	challengeRepository, err := persistence.NewIdentityChallengeRepository(dynamoDB)
 	if err != nil {
 		return nil, err
@@ -58,4 +68,25 @@ func InitializeRPCServer() (*otohttp.Server, error) {
 	consentService := consent.NewService(repository, consentChallengeRepository)
 	otohttpServer := admin.NewServer(identityService, consentService)
 	return otohttpServer, nil
+}
+
+// wire.go:
+
+var (
+	config app.Config
+	loaded bool
+)
+
+func loadConfig() (*app.Config, error) {
+	if loaded {
+		return &config, nil
+	}
+
+	if err := fig.Load(&config); err != nil {
+		return nil, err
+	}
+
+	loaded = true
+
+	return &config, nil
 }

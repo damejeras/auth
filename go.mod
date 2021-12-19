@@ -16,7 +16,10 @@ require (
 	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/kkyr/fig v0.3.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/pelletier/go-toml v1.9.3 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tidwall/btree v0.6.1 // indirect
 	github.com/tidwall/buntdb v1.2.7 // indirect
@@ -28,4 +31,5 @@ require (
 	github.com/tidwall/tinyqueue v0.1.1 // indirect
 	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
