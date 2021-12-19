@@ -1,7 +1,7 @@
 package identity
 
 import (
-	"github.com/damejeras/auth/internal/application"
+	"github.com/damejeras/auth/internal/consent"
 	"github.com/damejeras/auth/internal/integrity"
 	"github.com/go-oauth2/oauth2/v4/errors"
 	"github.com/go-oauth2/oauth2/v4/server"
@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	paramLoginVerifier   = "login_verifier"
-	paramConsentVerifier = "consent_verifier"
+	paramLoginVerifier = "login_verifier"
 
 	paramLoginChallenge   = "challenge"
 	paramConsentChallenge = "consent_challenge"
@@ -25,14 +24,14 @@ type Manager struct {
 	identityProviderURL        string
 	consentProviderURL         string
 	challengeRepository        ChallengeRepository
-	consentChallengeRepository ConsentChallengeRepository
-	consentRepository          ConsentRepository
+	consentChallengeRepository consent.ChallengeRepository
+	consentRepository          consent.Repository
 }
 
 func NewManager(
 	challengeRepository ChallengeRepository,
-	consentChallengeRepository ConsentChallengeRepository,
-	consentRepository ConsentRepository,
+	consentChallengeRepository consent.ChallengeRepository,
+	consentRepository consent.Repository,
 ) *Manager {
 	return &Manager{
 		identityProviderURL:        "http://localhost:8888/auth",
@@ -69,7 +68,7 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 				return "", errors.ErrAccessDenied
 			}
 
-			consent, err := m.consentRepository.FindByClientAndSubject(r.Context(), challenge.ClientID, challenge.Identity.SubjectID)
+			cs, err := m.consentRepository.FindByClientAndSubject(r.Context(), challenge.ClientID, challenge.Identity.SubjectID)
 			if err != nil {
 				// todo: log error
 				return "", errors.ErrServerError
@@ -77,10 +76,10 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 
 			requestedScopes := scopeParamToScopes(r.URL.Query().Get("scope"))
 
-			if consent == nil || !consent.Scopes.HasAll(requestedScopes) {
-				var consentChallenge *ConsentChallenge
-				if consent != nil {
-					consentChallenge, err = m.createConsentChallenge(r, requestedScopes, requestedScopes.Diff(consent.Scopes), challenge.ClientID, challenge.Identity.SubjectID)
+			if cs == nil || !cs.Scopes.HasAll(requestedScopes) {
+				var consentChallenge *consent.Challenge
+				if cs != nil {
+					consentChallenge, err = m.createConsentChallenge(r, requestedScopes, requestedScopes.Diff(cs.Scopes), challenge.ClientID, challenge.Identity.SubjectID)
 					if err != nil {
 						// todo log error
 
@@ -109,7 +108,7 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 			return challenge.Identity.SubjectID, nil
 		}
 
-		consentVerifier := r.URL.Query().Get(paramConsentVerifier)
+		consentVerifier := r.URL.Query().Get("consent_verifier")
 		if consentVerifier != "" {
 			consentChallenge, err := m.consentChallengeRepository.FindByVerifier(r.Context(), consentVerifier)
 			if err != nil {
@@ -156,7 +155,7 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 	}
 }
 
-func (m *Manager) createConsentChallenge(r *http.Request, requested, missing Scopes, clientID, subjectID string) (*ConsentChallenge, error) {
+func (m *Manager) createConsentChallenge(r *http.Request, requested, missing consent.Scopes, clientID, subjectID string) (*consent.Challenge, error) {
 	challengeID := ksuid.New().String()
 
 	cpURL, err := url.Parse(m.consentProviderURL)
@@ -169,7 +168,7 @@ func (m *Manager) createConsentChallenge(r *http.Request, requested, missing Sco
 
 	cpURL.RawQuery = queryValues.Encode()
 
-	challenge := ConsentChallenge{
+	challenge := consent.Challenge{
 		ID:              challengeID,
 		Verifier:        ksuid.New().String(),
 		ClientID:        clientID,
@@ -178,7 +177,7 @@ func (m *Manager) createConsentChallenge(r *http.Request, requested, missing Sco
 		MissingScopes:   missing,
 		GrantedScopes:   nil,
 		Footprint: &integrity.Footprint{
-			RequestID:   r.Context().Value(application.ContextRequestID).(string),
+			RequestID:   r.Context().Value(integrity.ContextRequestID).(string),
 			RedirectURL: cpURL.String(),
 			// TODO: use r.URL.Scheme ?
 			RequestURL: "http" + "://" + r.Host + r.URL.RequestURI(),
@@ -211,7 +210,7 @@ func (m *Manager) createLoginChallenge(r *http.Request) (*Challenge, error) {
 		ClientID: r.URL.Query().Get("client_id"),
 		Verifier: ksuid.New().String(),
 		Footprint: &integrity.Footprint{
-			RequestID:   r.Context().Value(application.ContextRequestID).(string),
+			RequestID:   r.Context().Value(integrity.ContextRequestID).(string),
 			RedirectURL: idpURL.String(),
 			// TODO: use r.URL.Scheme ???
 			RequestURL: "http" + "://" + r.Host + r.URL.RequestURI(),
@@ -253,7 +252,7 @@ func stringSliceDifference(i1, i2 []string) []string {
 	return result
 }
 
-func scopeParamToScopes(input string) Scopes {
+func scopeParamToScopes(input string) consent.Scopes {
 	result := make(map[string]struct{})
 	split := strings.Split(input, " ")
 	for i := range split {

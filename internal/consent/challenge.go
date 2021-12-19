@@ -1,4 +1,4 @@
-package identity
+package consent
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type ConsentChallenge struct {
+type Challenge struct {
 	ID              string
 	Verifier        string
 	ClientID        string
@@ -82,10 +82,10 @@ func (s Scopes) Merge(scopes Scopes) Scopes {
 	return result
 }
 
-type ConsentChallengeRepository interface {
-	Store(context.Context, *ConsentChallenge) error
-	UpdateWithGrantedScopes(context.Context, *ConsentChallenge) error
-	FindByID(context.Context, string) (*ConsentChallenge, error)
-	FindByVerifier(context.Context, string) (*ConsentChallenge, error)
-	Delete(context.Context, *ConsentChallenge) error
+type ChallengeRepository interface {
+	Store(context.Context, *Challenge) error
+	UpdateWithGrantedScopes(context.Context, *Challenge) error
+	FindByID(context.Context, string) (*Challenge, error)
+	FindByVerifier(context.Context, string) (*Challenge, error)
+	Delete(context.Context, *Challenge) error
 }

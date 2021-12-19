@@ -1,11 +1,11 @@
 package main
 
 import (
+	"github.com/damejeras/auth/internal/integrity"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/damejeras/auth/internal/application"
 	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/pacedotdev/oto/otohttp"
 )
@@ -29,8 +29,8 @@ func main() {
 }
 
 func run(oauth2Server *server.Server, rpcServer *otohttp.Server) {
-	http.Handle("/authorize", application.ContextMiddleware(wrapOauthServerHandlers(oauth2Server.HandleAuthorizeRequest)))
-	http.Handle("/token", application.ContextMiddleware(wrapOauthServerHandlers(oauth2Server.HandleTokenRequest)))
+	http.Handle("/authorize", integrity.ContextMiddleware(wrapOauthServerHandlers(oauth2Server.HandleAuthorizeRequest)))
+	http.Handle("/token", integrity.ContextMiddleware(wrapOauthServerHandlers(oauth2Server.HandleTokenRequest)))
 
 	go func() {
 		if err := http.ListenAndServe(":9097", rpcServer); err != nil {

@@ -1,4 +1,4 @@
-package identity
+package consent
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type Consent struct {
 	UpdatedAt time.Time
 }
 
-type ConsentRepository interface {
+type Repository interface {
 	Store(ctx context.Context, consent *Consent) error
 	UpdateWithScopes(ctx context.Context, consent *Consent) error
 	FindByClientAndSubject(ctx context.Context, clientID, subjectID string) (*Consent, error)

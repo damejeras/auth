@@ -6,13 +6,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/damejeras/auth/internal/identity"
+	"github.com/damejeras/auth/internal/consent"
 	"github.com/pkg/errors"
 	"strconv"
 	"time"
 )
 
-const tableIdentityConsent = "oauth2_identity_consent"
+const tableConsent = "oauth2_consent"
 
 type consentRepresentation struct {
 	ID        string
@@ -27,7 +27,7 @@ type consentRepository struct {
 	db *dynamodb.DynamoDB
 }
 
-func NewConsentRepository(db *dynamodb.DynamoDB) (identity.ConsentRepository, error) {
+func NewConsentRepository(db *dynamodb.DynamoDB) (consent.Repository, error) {
 	if err := migrateIdentityConsentTable(db); err != nil {
 		return nil, errors.Wrap(err, "run table migration")
 	}
@@ -35,14 +35,14 @@ func NewConsentRepository(db *dynamodb.DynamoDB) (identity.ConsentRepository, er
 	return &consentRepository{db: db}, nil
 }
 
-func (c *consentRepository) Store(ctx context.Context, consent *identity.Consent) error {
+func (c *consentRepository) Store(ctx context.Context, consent *consent.Consent) error {
 	scopeBytes, err := json.Marshal(consent.Scopes)
 	if err != nil {
 		return errors.Wrap(err, "marshal scopes")
 	}
 
 	_, err = c.db.PutItemWithContext(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(tableIdentityConsent),
+		TableName: aws.String(tableConsent),
 		Item: map[string]*dynamodb.AttributeValue{
 			"ID":        {S: aws.String(consent.ID)},
 			"ClientID":  {S: aws.String(consent.ClientID)},
@@ -56,14 +56,14 @@ func (c *consentRepository) Store(ctx context.Context, consent *identity.Consent
 	return errors.Wrap(err, "execute query")
 }
 
-func (c *consentRepository) UpdateWithScopes(ctx context.Context, consent *identity.Consent) error {
+func (c *consentRepository) UpdateWithScopes(ctx context.Context, consent *consent.Consent) error {
 	scopeBytes, err := json.Marshal(consent.Scopes)
 	if err != nil {
 		return errors.Wrap(err, "marshal scopes")
 	}
 
 	_, err = c.db.UpdateItemWithContext(ctx, &dynamodb.UpdateItemInput{
-		TableName: aws.String(tableIdentityConsent),
+		TableName: aws.String(tableConsent),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ID": {S: aws.String(consent.ID)},
 		},
@@ -77,7 +77,7 @@ func (c *consentRepository) UpdateWithScopes(ctx context.Context, consent *ident
 	return errors.Wrap(err, "execute query")
 }
 
-func (c *consentRepository) FindByClientAndSubject(ctx context.Context, clientID, subjectID string) (*identity.Consent, error) {
+func (c *consentRepository) FindByClientAndSubject(ctx context.Context, clientID, subjectID string) (*consent.Consent, error) {
 	input := &dynamodb.QueryInput{
 		IndexName: aws.String("ClientSubjectIndex"),
 		KeyConditions: map[string]*dynamodb.Condition{
@@ -98,7 +98,7 @@ func (c *consentRepository) FindByClientAndSubject(ctx context.Context, clientID
 				},
 			},
 		},
-		TableName: aws.String(tableIdentityConsent),
+		TableName: aws.String(tableConsent),
 	}
 
 	result, err := c.db.QueryWithContext(ctx, input)
@@ -115,12 +115,12 @@ func (c *consentRepository) FindByClientAndSubject(ctx context.Context, clientID
 		return nil, err
 	}
 
-	var scopes identity.Scopes
+	var scopes consent.Scopes
 	if err := json.Unmarshal(representation.Scopes, &scopes); err != nil {
 		return nil, err
 	}
 
-	return &identity.Consent{
+	return &consent.Consent{
 		ID:        representation.ID,
 		ClientID:  representation.ClientID,
 		SubjectID: representation.SubjectID,
@@ -137,7 +137,7 @@ func migrateIdentityConsentTable(db *dynamodb.DynamoDB) error {
 	}
 
 	for _, table := range tables.TableNames {
-		if *table == tableIdentityConsent {
+		if *table == tableConsent {
 			return nil
 		}
 	}
@@ -171,7 +171,7 @@ func migrateIdentityConsentTable(db *dynamodb.DynamoDB) error {
 			ReadCapacityUnits:  aws.Int64(5),
 			WriteCapacityUnits: aws.Int64(10),
 		},
-		TableName: aws.String(tableIdentityConsent),
+		TableName: aws.String(tableConsent),
 	})
 
 	return err

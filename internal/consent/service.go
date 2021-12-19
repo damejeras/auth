@@ -1,4 +1,4 @@
-package identity
+package consent
 
 import (
 	"context"
@@ -9,11 +9,11 @@ import (
 )
 
 type consentService struct {
-	consentRepository          ConsentRepository
-	consentChallengeRepository ConsentChallengeRepository
+	consentRepository          Repository
+	consentChallengeRepository ChallengeRepository
 }
 
-func NewConsentService(consentRepository ConsentRepository, consentChallengeRepository ConsentChallengeRepository) api.ConsentService {
+func NewService(consentRepository Repository, consentChallengeRepository ChallengeRepository) api.ConsentService {
 	return &consentService{
 		consentRepository:          consentRepository,
 		consentChallengeRepository: consentChallengeRepository,
@@ -69,7 +69,7 @@ func (c *consentService) GrantConsent(ctx context.Context, request api.GrantCons
 		return nil, errors.Wrap(err, "parse url values")
 	}
 
-	urlValues.Add(paramConsentVerifier, challenge.Verifier)
+	urlValues.Add("consent_verifier", challenge.Verifier)
 
 	requestURL.RawQuery = urlValues.Encode()
 

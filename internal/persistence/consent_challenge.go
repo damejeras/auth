@@ -6,14 +6,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/damejeras/auth/internal/identity"
+	"github.com/damejeras/auth/internal/consent"
 	"github.com/damejeras/auth/internal/integrity"
 	"github.com/pkg/errors"
 	"strconv"
 	"time"
 )
 
-const tableIdentityConsentChallenge = "oauth2_identity_consent_challenge"
+const tableConsentChallenge = "oauth2_consent_challenge"
 
 type consentChallengeRepresentation struct {
 	ID              string
@@ -33,7 +33,7 @@ type consentChallengeRepository struct {
 	db *dynamodb.DynamoDB
 }
 
-func NewConsentChallengeRepository(db *dynamodb.DynamoDB) (identity.ConsentChallengeRepository, error) {
+func NewConsentChallengeRepository(db *dynamodb.DynamoDB) (consent.ChallengeRepository, error) {
 	if err := migrateConsentChallengeTable(db); err != nil {
 		return nil, errors.Wrap(err, "run table migration")
 	}
@@ -41,7 +41,7 @@ func NewConsentChallengeRepository(db *dynamodb.DynamoDB) (identity.ConsentChall
 	return &consentChallengeRepository{db: db}, nil
 }
 
-func (c *consentChallengeRepository) Store(ctx context.Context, challenge *identity.ConsentChallenge) error {
+func (c *consentChallengeRepository) Store(ctx context.Context, challenge *consent.Challenge) error {
 	requestedScopes, err := json.Marshal(challenge.RequestedScopes)
 	if err != nil {
 		return errors.Wrap(err, "marshal requested scopes")
@@ -63,7 +63,7 @@ func (c *consentChallengeRepository) Store(ctx context.Context, challenge *ident
 	}
 
 	_, err = c.db.PutItemWithContext(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(tableIdentityConsentChallenge),
+		TableName: aws.String(tableConsentChallenge),
 		Item: map[string]*dynamodb.AttributeValue{
 			"ID":              {S: aws.String(challenge.ID)},
 			"Verifier":        {S: aws.String(challenge.Verifier)},
@@ -82,14 +82,14 @@ func (c *consentChallengeRepository) Store(ctx context.Context, challenge *ident
 	return errors.Wrap(err, "execute query")
 }
 
-func (c *consentChallengeRepository) UpdateWithGrantedScopes(ctx context.Context, challenge *identity.ConsentChallenge) error {
+func (c *consentChallengeRepository) UpdateWithGrantedScopes(ctx context.Context, challenge *consent.Challenge) error {
 	grantedScopes, err := json.Marshal(challenge.GrantedScopes)
 	if err != nil {
 		return errors.Wrap(err, "marshal authorization")
 	}
 
 	_, err = c.db.UpdateItemWithContext(ctx, &dynamodb.UpdateItemInput{
-		TableName: aws.String(tableIdentityConsentChallenge),
+		TableName: aws.String(tableConsentChallenge),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ID": {S: aws.String(challenge.ID)},
 		},
@@ -103,9 +103,9 @@ func (c *consentChallengeRepository) UpdateWithGrantedScopes(ctx context.Context
 	return errors.Wrap(err, "execute query")
 }
 
-func (c *consentChallengeRepository) FindByID(ctx context.Context, id string) (*identity.ConsentChallenge, error) {
+func (c *consentChallengeRepository) FindByID(ctx context.Context, id string) (*consent.Challenge, error) {
 	result, err := c.db.GetItemWithContext(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(tableIdentityConsentChallenge),
+		TableName: aws.String(tableConsentChallenge),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ID": {S: aws.String(id)},
 		},
@@ -124,7 +124,7 @@ func (c *consentChallengeRepository) FindByID(ctx context.Context, id string) (*
 		return nil, errors.Wrap(err, "unmarshal query result")
 	}
 
-	var requestedScopes, missingScopes, grantedScopes identity.Scopes
+	var requestedScopes, missingScopes, grantedScopes consent.Scopes
 	if err := json.Unmarshal(representation.RequestedScopes, &requestedScopes); err != nil {
 		return nil, errors.Wrap(err, "unmarshal requested scopes")
 	}
@@ -142,7 +142,7 @@ func (c *consentChallengeRepository) FindByID(ctx context.Context, id string) (*
 		return nil, errors.Wrap(err, "unmarshal footprint")
 	}
 
-	return &identity.ConsentChallenge{
+	return &consent.Challenge{
 		ID:              representation.ID,
 		Verifier:        representation.Verifier,
 		ClientID:        representation.ClientID,
@@ -157,7 +157,7 @@ func (c *consentChallengeRepository) FindByID(ctx context.Context, id string) (*
 	}, nil
 }
 
-func (c *consentChallengeRepository) FindByVerifier(ctx context.Context, verifier string) (*identity.ConsentChallenge, error) {
+func (c *consentChallengeRepository) FindByVerifier(ctx context.Context, verifier string) (*consent.Challenge, error) {
 	input := &dynamodb.QueryInput{
 		IndexName: aws.String("ConsentVerifierIndex"),
 		KeyConditions: map[string]*dynamodb.Condition{
@@ -170,7 +170,7 @@ func (c *consentChallengeRepository) FindByVerifier(ctx context.Context, verifie
 				},
 			},
 		},
-		TableName: aws.String(tableIdentityConsentChallenge),
+		TableName: aws.String(tableConsentChallenge),
 	}
 
 	result, err := c.db.QueryWithContext(ctx, input)
@@ -191,7 +191,7 @@ func (c *consentChallengeRepository) FindByVerifier(ctx context.Context, verifie
 		return nil, errors.Wrap(err, "unmarshal query result")
 	}
 
-	var requestedScopes, missingScopes, grantedScopes identity.Scopes
+	var requestedScopes, missingScopes, grantedScopes consent.Scopes
 	if err := json.Unmarshal(representation.RequestedScopes, &requestedScopes); err != nil {
 		return nil, errors.Wrap(err, "unmarshal requested scopes")
 	}
@@ -209,7 +209,7 @@ func (c *consentChallengeRepository) FindByVerifier(ctx context.Context, verifie
 		return nil, errors.Wrap(err, "unmarshal footprint")
 	}
 
-	return &identity.ConsentChallenge{
+	return &consent.Challenge{
 		ID:              representation.ID,
 		Verifier:        representation.Verifier,
 		ClientID:        representation.ClientID,
@@ -224,9 +224,9 @@ func (c *consentChallengeRepository) FindByVerifier(ctx context.Context, verifie
 	}, nil
 }
 
-func (c *consentChallengeRepository) Delete(ctx context.Context, challenge *identity.ConsentChallenge) error {
+func (c *consentChallengeRepository) Delete(ctx context.Context, challenge *consent.Challenge) error {
 	_, err := c.db.DeleteItemWithContext(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(tableIdentityConsentChallenge),
+		TableName: aws.String(tableConsentChallenge),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ID": {S: aws.String(challenge.ID)},
 		},
@@ -242,7 +242,7 @@ func migrateConsentChallengeTable(db *dynamodb.DynamoDB) error {
 	}
 
 	for _, table := range tables.TableNames {
-		if *table == tableIdentityConsentChallenge {
+		if *table == tableConsentChallenge {
 			return nil
 		}
 	}
@@ -275,7 +275,7 @@ func migrateConsentChallengeTable(db *dynamodb.DynamoDB) error {
 			ReadCapacityUnits:  aws.Int64(5),
 			WriteCapacityUnits: aws.Int64(10),
 		},
-		TableName: aws.String(tableIdentityConsentChallenge),
+		TableName: aws.String(tableConsentChallenge),
 	})
 
 	return err
