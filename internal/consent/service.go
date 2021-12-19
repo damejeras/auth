@@ -30,7 +30,7 @@ func (c *consentService) GrantConsent(ctx context.Context, request api.GrantCons
 		return nil, errors.Errorf("invalid consent challenge")
 	}
 
-	challenge.GrantedScopes = BuildScopes(request.Scope)
+	challenge.GrantedScopes = BuildScopes(request.Scopes)
 
 	consent, err := c.consentRepository.FindByClientAndSubject(ctx, challenge.ClientID, challenge.SubjectID)
 	if err != nil {
@@ -85,8 +85,9 @@ func (c *consentService) ShowConsentChallenge(ctx context.Context, request api.S
 	}
 
 	return &api.ShowConsentChallengeResponse{
-		ClientID:       challenge.ID,
-		SubjectID:      challenge.SubjectID,
-		RequestedScope: challenge.RequestedScopes.ToSlice(),
+		ClientID:        challenge.ID,
+		SubjectID:       challenge.SubjectID,
+		RequestedScopes: challenge.RequestedScopes.ToSlice(),
+		MissingScopes:   challenge.MissingScopes.ToSlice(),
 	}, nil
 }

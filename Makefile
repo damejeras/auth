@@ -8,8 +8,8 @@ spec:
 		./api/admin
 	gofmt -w ./api/admin.gen.go ./api/admin.gen.go
 	oto -template ./api/templates/client.go.plush \
-		-out ./pkg/rpc/client.gen.go \
+		-out ./api/client/client.gen.go \
 		-ignore Ignorer \
-		-pkg rpc \
+		-pkg client \
 		./api/admin
-	gofmt -w ./pkg/rpc/client.gen.go ./pkg/rpc/client.gen.go
+	gofmt -w ./api/client/client.gen.go ./api/client/client.gen.go

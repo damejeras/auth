@@ -111,7 +111,7 @@ type AuthenticateResponse struct {
 
 type GrantConsentRequest struct {
 	ChallengeID string   `json:"challengeID"`
-	Scope       []string `json:"scope"`
+	Scopes      []string `json:"scopes"`
 }
 
 type GrantConsentResponse struct {
@@ -125,9 +125,10 @@ type ShowConsentChallengeRequest struct {
 }
 
 type ShowConsentChallengeResponse struct {
-	ClientID       string   `json:"clientID"`
-	SubjectID      string   `json:"subjectID"`
-	RequestedScope []string `json:"requestedScope"`
+	ClientID        string   `json:"clientID"`
+	SubjectID       string   `json:"subjectID"`
+	RequestedScopes []string `json:"requestedScopes"`
+	MissingScopes   []string `json:"missingScopes"`
 	// Error is string explaining what went wrong. Empty if everything was fine.
 	Error string `json:"error,omitempty"`
 }
