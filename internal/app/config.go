@@ -1,22 +1,22 @@
 package app
 
 type Config struct {
-	API struct {
+	AdminConfig struct {
 		Port string `default:":9097"`
-	}
-	App struct {
+	} `fig:"admin""`
+	Oauth2Config struct {
 		Port string `default:":9096"`
-	}
-	ConsentProvider struct {
-		Address string `default:"http://localhost:8888/consent"`
-	}
-	IdentityProvider struct {
-		Address string `default:"http://localhost:8888/auth"`
-	}
-	AWS struct {
+	} `fig:"app"`
+	AWSConfig struct {
 		Region   string `validate:"required"`
 		Endpoint string `validate:"required"`
 		ID       string `validate:"required"`
 		Secret   string `validate:"required"`
-	}
+	} `fig:"aws"`
+	ConsentProviderConfig struct {
+		Address string `default:"http://localhost:8888/consent"`
+	} `fig:"consent_provider"`
+	IdentityProviderConfig struct {
+		Address string `default:"http://localhost:8888/auth"`
+	} `fig:"identity_provider"`
 }

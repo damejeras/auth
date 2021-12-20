@@ -38,7 +38,7 @@ func run(config *app.Config, oauth2, admin *http.Server) {
 	ctx, cancel := grace.NewAppContext()
 	defer cancel()
 
-	adminListener, err := net.Listen("tcp", config.API.Port)
+	adminListener, err := net.Listen("tcp", config.AdminConfig.Port)
 	if err != nil {
 		log.Printf("create rpc server listener: %v", err)
 
@@ -53,7 +53,7 @@ func run(config *app.Config, oauth2, admin *http.Server) {
 		}
 	}()
 
-	oauth2Listener, err := net.Listen("tcp", config.App.Port)
+	oauth2Listener, err := net.Listen("tcp", config.Oauth2Config.Port)
 	if err != nil {
 		log.Printf("create oauth2 server listener: %v", err)
 

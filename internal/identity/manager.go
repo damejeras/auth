@@ -36,8 +36,8 @@ func NewManager(
 	cfg *app.Config,
 ) *Manager {
 	return &Manager{
-		identityProviderURL:        cfg.IdentityProvider.Address,
-		consentProviderURL:         cfg.ConsentProvider.Address,
+		identityProviderURL:        cfg.IdentityProviderConfig.Address,
+		consentProviderURL:         cfg.ConsentProviderConfig.Address,
 		challengeRepository:        challengeRepository,
 		consentChallengeRepository: consentChallengeRepository,
 		consentRepository:          consentRepository,

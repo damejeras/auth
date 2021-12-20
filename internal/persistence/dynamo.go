@@ -11,9 +11,9 @@ import (
 
 func NewDynamoDBClient(cfg *app.Config) *dynamodb.DynamoDB {
 	awsConfig := aws.NewConfig()
-	awsConfig.Region = aws.String(cfg.AWS.Region)
-	awsConfig.Endpoint = aws.String(cfg.AWS.Endpoint)
-	awsConfig.Credentials = credentials.NewStaticCredentials(cfg.AWS.ID, cfg.AWS.Secret, "")
+	awsConfig.Region = aws.String(cfg.AWSConfig.Region)
+	awsConfig.Endpoint = aws.String(cfg.AWSConfig.Endpoint)
+	awsConfig.Credentials = credentials.NewStaticCredentials(cfg.AWSConfig.ID, cfg.AWSConfig.Secret, "")
 
 	awsSession, err := session.NewSession(awsConfig)
 	if err != nil {
