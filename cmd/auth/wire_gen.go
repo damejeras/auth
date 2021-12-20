@@ -14,19 +14,14 @@ import (
 	"github.com/damejeras/auth/internal/identity"
 	"github.com/damejeras/auth/internal/oauth2"
 	"github.com/damejeras/auth/internal/persistence"
-	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/kkyr/fig"
-	"github.com/pacedotdev/oto/otohttp"
+	"net/http"
 )
 
 // Injectors from wire.go:
 
-func InitializeOauth2Server() (*server.Server, error) {
-	appConfig, err := loadConfig()
-	if err != nil {
-		return nil, err
-	}
-	dynamoDB := persistence.NewDynamoDBClient(appConfig)
+func initOauth2HTTP(cfg *app.Config) (*http.Server, error) {
+	dynamoDB := persistence.NewDynamoDBClient(cfg)
 	clientStore := client.NewClientStorage()
 	manager := oauth2.NewManager(dynamoDB, clientStore)
 	challengeRepository, err := persistence.NewIdentityChallengeRepository(dynamoDB)
@@ -41,17 +36,14 @@ func InitializeOauth2Server() (*server.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	identityManager := identity.NewManager(challengeRepository, consentChallengeRepository, repository, appConfig)
-	serverServer := oauth2.NewServer(manager, identityManager)
-	return serverServer, nil
+	identityManager := identity.NewManager(challengeRepository, consentChallengeRepository, repository, cfg)
+	server := oauth2.NewServer(manager, identityManager)
+	httpServer := oauth2.NewHTTPServer(server)
+	return httpServer, nil
 }
 
-func InitializeRPCServer() (*otohttp.Server, error) {
-	appConfig, err := loadConfig()
-	if err != nil {
-		return nil, err
-	}
-	dynamoDB := persistence.NewDynamoDBClient(appConfig)
+func initAdminHTTP(cfg *app.Config) (*http.Server, error) {
+	dynamoDB := persistence.NewDynamoDBClient(cfg)
 	challengeRepository, err := persistence.NewIdentityChallengeRepository(dynamoDB)
 	if err != nil {
 		return nil, err
@@ -66,27 +58,17 @@ func InitializeRPCServer() (*otohttp.Server, error) {
 		return nil, err
 	}
 	consentService := consent.NewService(repository, consentChallengeRepository)
-	otohttpServer := admin.NewServer(identityService, consentService)
-	return otohttpServer, nil
+	server := admin.NewHTTPServer(identityService, consentService)
+	return server, nil
 }
 
 // wire.go:
 
-var (
-	config app.Config
-	loaded bool
-)
-
-func loadConfig() (*app.Config, error) {
-	if loaded {
-		return &config, nil
-	}
-
+func initConfig() (*app.Config, error) {
+	var config app.Config
 	if err := fig.Load(&config); err != nil {
 		return nil, err
 	}
-
-	loaded = true
 
 	return &config, nil
 }

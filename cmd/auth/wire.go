@@ -10,20 +10,23 @@ import (
 	"github.com/damejeras/auth/internal/identity"
 	"github.com/damejeras/auth/internal/oauth2"
 	"github.com/damejeras/auth/internal/persistence"
-	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/google/wire"
 	"github.com/kkyr/fig"
-	"github.com/pacedotdev/oto/otohttp"
+	"net/http"
 )
 
-var (
-	config app.Config
-	loaded bool
-)
+func initConfig() (*app.Config, error) {
+	var config app.Config
+	if err := fig.Load(&config); err != nil {
+		return nil, err
+	}
 
-func InitializeOauth2Server() (*server.Server, error) {
+	return &config, nil
+}
+
+func initOauth2HTTP(cfg *app.Config) (*http.Server, error) {
 	wire.Build(
-		loadConfig,
+		oauth2.NewHTTPServer,
 		oauth2.NewServer,
 		oauth2.NewManager,
 		client.NewClientStorage,
@@ -37,31 +40,16 @@ func InitializeOauth2Server() (*server.Server, error) {
 	return nil, nil
 }
 
-func InitializeRPCServer() (*otohttp.Server, error) {
+func initAdminHTTP(cfg *app.Config) (*http.Server, error) {
 	wire.Build(
-		loadConfig,
+		admin.NewHTTPServer,
 		identity.NewService,
 		consent.NewService,
 		persistence.NewDynamoDBClient,
 		persistence.NewIdentityChallengeRepository,
 		persistence.NewConsentChallengeRepository,
 		persistence.NewConsentRepository,
-		admin.NewServer,
 	)
 
 	return nil, nil
-}
-
-func loadConfig() (*app.Config, error) {
-	if loaded {
-		return &config, nil
-	}
-
-	if err := fig.Load(&config); err != nil {
-		return nil, err
-	}
-
-	loaded = true
-
-	return &config, nil
 }

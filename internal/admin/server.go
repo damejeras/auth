@@ -3,14 +3,17 @@ package admin
 import (
 	"github.com/damejeras/auth/api"
 	"github.com/pacedotdev/oto/otohttp"
+	"net/http"
 )
 
-func NewServer(identityService api.IdentityService, consentService api.ConsentService) *otohttp.Server {
+func NewHTTPServer(identityService api.IdentityService, consentService api.ConsentService) *http.Server {
 	rpcServer := otohttp.NewServer()
 	rpcServer.Basepath = "/api/"
 
 	api.RegisterIdentityService(rpcServer, identityService)
 	api.RegisterConsentService(rpcServer, consentService)
 
-	return rpcServer
+	return &http.Server{
+		Handler: rpcServer,
+	}
 }

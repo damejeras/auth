@@ -2,63 +2,67 @@ package main
 
 import (
 	"github.com/damejeras/auth/internal/app"
-	"github.com/damejeras/auth/internal/integrity"
+	"github.com/damejeras/auth/pkg/grace"
 	"log"
+	"net"
 	"net/http"
 	"os"
-
-	"github.com/go-oauth2/oauth2/v4/server"
-	"github.com/pacedotdev/oto/otohttp"
 )
 
 func main() {
-	cfg, err := loadConfig()
+	config, err := initConfig()
 	if err != nil {
-		log.Printf("load config: %v", err)
+		log.Printf("init config: %v", err)
 
 		os.Exit(1)
 	}
 
-	oauth2Server, err := InitializeOauth2Server()
+	oauth2Server, err := initOauth2HTTP(config)
 	if err != nil {
-		log.Printf("initialize oauth2 server: %v", err)
+		log.Printf("init oauth2 http: %v", err)
 
 		os.Exit(1)
 	}
 
-	rpcServer, err := InitializeRPCServer()
+	adminServer, err := initAdminHTTP(config)
 	if err != nil {
-		log.Printf("initialize rpc server: %v", err)
+		log.Printf("init admin http: %v", err)
 
 		os.Exit(1)
 	}
 
-	run(cfg, oauth2Server, rpcServer)
+	run(config, oauth2Server, adminServer)
 }
 
-func run(cfg *app.Config, oauth2Server *server.Server, rpcServer *otohttp.Server) {
-	http.Handle("/authorize", integrity.ContextMiddleware(wrapOauthServerHandlers(oauth2Server.HandleAuthorizeRequest)))
-	http.Handle("/token", integrity.ContextMiddleware(wrapOauthServerHandlers(oauth2Server.HandleTokenRequest)))
+func run(config *app.Config, oauth2, admin *http.Server) {
+	ctx, cancel := grace.NewAppContext()
+	defer cancel()
+
+	adminListener, err := net.Listen("tcp", config.API.Port)
+	if err != nil {
+		log.Printf("create rpc server listener: %v", err)
+
+		os.Exit(1)
+	}
 
 	go func() {
-		log.Printf("serving rpc server on %q", cfg.API.Port)
-		if err := http.ListenAndServe(cfg.API.Port, rpcServer); err != nil {
+		if err := grace.Serve(ctx, admin, adminListener); err != nil {
 			log.Printf("serve rpc server: %v", err)
+
+			cancel()
 		}
 	}()
 
-	log.Printf("serving application on %q", cfg.App.Port)
-	if err := http.ListenAndServe(cfg.App.Port, nil); err != nil {
-		log.Printf("listen and serve: %v", err)
+	oauth2Listener, err := net.Listen("tcp", config.App.Port)
+	if err != nil {
+		log.Printf("create oauth2 server listener: %v", err)
 
 		os.Exit(1)
 	}
-}
 
-func wrapOauthServerHandlers(handler func(w http.ResponseWriter, r *http.Request) error) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := handler(w, r); err != nil {
-			log.Println(err)
-		}
+	if err := grace.Serve(ctx, oauth2, oauth2Listener); err != nil {
+		log.Printf("serve oauth2 server: %v", err)
+
+		os.Exit(1)
 	}
 }
