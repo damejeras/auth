@@ -1,4 +1,4 @@
-package integrity
+package app
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 type contextKey int
 
 const (
-	ContextRequestID contextKey = iota
+	requestIDContextKey contextKey = iota
 
 	cookieRequestID = "r"
 )
 
-func ContextMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func RequestMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestID := ksuid.New().String()
 
@@ -25,11 +25,15 @@ func ContextMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			HttpOnly: true,
 		})
 
-		next(w, r.Clone(context.WithValue(r.Context(), ContextRequestID, requestID)))
+		next(w, r.Clone(context.WithValue(r.Context(), requestIDContextKey, requestID)))
 	}
 }
 
-func GetRequestID(r *http.Request) string {
+func GetCurrentRequestID(r *http.Request) string {
+	return r.Context().Value(requestIDContextKey).(string)
+}
+
+func GetPreviousRequestID(r *http.Request) string {
 	cookie, err := r.Cookie(cookieRequestID)
 	if err != nil {
 		return ""

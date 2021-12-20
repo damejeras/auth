@@ -179,7 +179,7 @@ func (m *Manager) createConsentChallenge(r *http.Request, requested, missing con
 		MissingScopes:   missing,
 		GrantedScopes:   nil,
 		Footprint: &integrity.Footprint{
-			RequestID:   r.Context().Value(integrity.ContextRequestID).(string),
+			RequestID:   app.GetCurrentRequestID(r),
 			RedirectURL: cpURL.String(),
 			// TODO: use r.URL.Scheme ?
 			RequestURL: "http" + "://" + r.Host + r.URL.RequestURI(),
@@ -212,7 +212,7 @@ func (m *Manager) createLoginChallenge(r *http.Request) (*Challenge, error) {
 		ClientID: r.URL.Query().Get("client_id"),
 		Verifier: ksuid.New().String(),
 		Footprint: &integrity.Footprint{
-			RequestID:   r.Context().Value(integrity.ContextRequestID).(string),
+			RequestID:   app.GetCurrentRequestID(r),
 			RedirectURL: idpURL.String(),
 			// TODO: use r.URL.Scheme ???
 			RequestURL: "http" + "://" + r.Host + r.URL.RequestURI(),

@@ -2,6 +2,7 @@ package integrity
 
 import (
 	"fmt"
+	"github.com/damejeras/auth/internal/app"
 	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
@@ -34,7 +35,7 @@ type Footprint struct {
 }
 
 func (f *Footprint) Validate(r *http.Request) error {
-	previousRequestID := GetRequestID(r)
+	previousRequestID := app.GetPreviousRequestID(r)
 	if previousRequestID != f.RequestID {
 		return ValidationError("request ID does not match")
 	}
