@@ -7,6 +7,7 @@ import (
 	"github.com/go-oauth2/oauth2/v4/errors"
 	"github.com/go-oauth2/oauth2/v4/server"
 	pkgErrors "github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"net/http"
 	"net/url"
@@ -27,12 +28,14 @@ type Manager struct {
 	challengeRepository        ChallengeRepository
 	consentChallengeRepository consent.ChallengeRepository
 	consentRepository          consent.Repository
+	logger                     *zerolog.Logger
 }
 
 func NewManager(
 	challengeRepository ChallengeRepository,
 	consentChallengeRepository consent.ChallengeRepository,
 	consentRepository consent.Repository,
+	logger *zerolog.Logger,
 	cfg *app.Config,
 ) *Manager {
 	return &Manager{
@@ -41,6 +44,7 @@ func NewManager(
 		challengeRepository:        challengeRepository,
 		consentChallengeRepository: consentChallengeRepository,
 		consentRepository:          consentRepository,
+		logger:                     logger,
 	}
 }
 
@@ -48,10 +52,19 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 	return func(w http.ResponseWriter, r *http.Request) (userID string, err error) {
 		loginVerifier := r.URL.Query().Get(paramLoginVerifier)
 		if loginVerifier != "" {
+			m.logger.Trace().Msgf("serve login verifier %q", loginVerifier)
+
 			challenge, err := m.challengeRepository.FindByVerifier(r.Context(), loginVerifier)
 			if err != nil {
-				// todo: log error
+				m.logger.Error().Err(err).Msg("find challenge by login verifier")
+
 				return "", errors.ErrServerError
+			}
+
+			if challenge == nil {
+				m.logger.Warn().Msgf("login verifier %q not found", loginVerifier)
+
+				return "", errors.ErrInvalidRequest
 			}
 
 			if err := challenge.Footprint.Validate(r); err != nil {
@@ -60,7 +73,8 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 					// todo: track violation
 					return "", errors.ErrAccessDenied
 				default:
-					// todo: log error
+					m.logger.Error().Err(err).Msg("validate request")
+
 					return "", errors.ErrServerError
 				}
 			}
@@ -72,7 +86,8 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 
 			cs, err := m.consentRepository.FindByClientAndSubject(r.Context(), challenge.ClientID, challenge.Identity.SubjectID)
 			if err != nil {
-				// todo: log error
+				m.logger.Error().Err(err).Msgf("find client's %q consent for subject %q", challenge.ClientID, challenge.Identity.SubjectID)
+
 				return "", errors.ErrServerError
 			}
 
@@ -83,14 +98,14 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 				if cs != nil {
 					consentChallenge, err = m.createConsentChallenge(r, requestedScopes, requestedScopes.Diff(cs.Scopes), challenge.ClientID, challenge.Identity.SubjectID)
 					if err != nil {
-						// todo log error
+						m.logger.Error().Err(err).Msg("create consent challenge")
 
 						return "", errors.ErrServerError
 					}
 				} else {
 					consentChallenge, err = m.createConsentChallenge(r, requestedScopes, requestedScopes, challenge.ClientID, challenge.Identity.SubjectID)
 					if err != nil {
-						// todo log error
+						m.logger.Error().Err(err).Msg("create consent challenge")
 
 						return "", errors.ErrServerError
 					}
@@ -103,7 +118,8 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 			}
 
 			if err := m.challengeRepository.Delete(r.Context(), challenge); err != nil {
-				// todo: log error
+				m.logger.Error().Err(err).Msgf("delete login challenge %q", challenge)
+
 				return "", errors.ErrServerError
 			}
 
@@ -112,9 +128,12 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 
 		consentVerifier := r.URL.Query().Get("consent_verifier")
 		if consentVerifier != "" {
+			m.logger.Trace().Msgf("serve consent verifier %q", consentVerifier)
+
 			consentChallenge, err := m.consentChallengeRepository.FindByVerifier(r.Context(), consentVerifier)
 			if err != nil {
-				// todo: log error
+				m.logger.Error().Err(err).Msg("find consent challenge by verifier")
+
 				return "", errors.ErrServerError
 			}
 
@@ -129,7 +148,8 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 					// todo: track violation
 					return "", errors.ErrAccessDenied
 				default:
-					// todo: log error
+					m.logger.Error().Err(err).Msg("validate footprint")
+
 					return "", errors.ErrServerError
 				}
 			}
@@ -137,16 +157,20 @@ func (m *Manager) UserAuthorizationHandler() server.UserAuthorizationHandler {
 			consentChallenge.Used = true
 
 			if err := m.consentChallengeRepository.Delete(r.Context(), consentChallenge); err != nil {
-				// todo: log error
+				m.logger.Error().Err(err).Msgf("delete consent challenge %q", consentChallenge)
+
 				return "", errors.ErrServerError
 			}
 
 			return consentChallenge.SubjectID, nil
 		}
 
+		m.logger.Trace().Msg("creating new login challenge")
+
 		challenge, err := m.createLoginChallenge(r)
 		if err != nil {
-			// TODO: log error
+			m.logger.Error().Err(err).Msg("create login challenge")
+
 			return "", errors.ErrServerError
 		}
 

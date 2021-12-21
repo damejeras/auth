@@ -15,15 +15,19 @@ import (
 	"github.com/damejeras/auth/internal/oauth2"
 	"github.com/damejeras/auth/internal/persistence"
 	"github.com/kkyr/fig"
+	"github.com/rs/zerolog"
 	"net/http"
 )
 
 // Injectors from wire.go:
 
-func initOauth2HTTP(cfg *app.Config) (*http.Server, error) {
+func initOauth2HTTP(cfg *app.Config, logger *zerolog.Logger) (*http.Server, error) {
 	dynamoDB := persistence.NewDynamoDBClient(cfg)
 	clientStore := client.NewClientStorage()
-	manager := oauth2.NewManager(dynamoDB, clientStore)
+	manager, err := oauth2.NewManager(dynamoDB, clientStore)
+	if err != nil {
+		return nil, err
+	}
 	challengeRepository, err := persistence.NewIdentityChallengeRepository(dynamoDB)
 	if err != nil {
 		return nil, err
@@ -36,13 +40,13 @@ func initOauth2HTTP(cfg *app.Config) (*http.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	identityManager := identity.NewManager(challengeRepository, consentChallengeRepository, repository, cfg)
+	identityManager := identity.NewManager(challengeRepository, consentChallengeRepository, repository, logger, cfg)
 	server := oauth2.NewServer(manager, identityManager)
 	httpServer := oauth2.NewHTTPServer(server)
 	return httpServer, nil
 }
 
-func initAdminHTTP(cfg *app.Config) (*http.Server, error) {
+func initAdminHTTP(cfg *app.Config, logger *zerolog.Logger) (*http.Server, error) {
 	dynamoDB := persistence.NewDynamoDBClient(cfg)
 	challengeRepository, err := persistence.NewIdentityChallengeRepository(dynamoDB)
 	if err != nil {
@@ -63,6 +67,12 @@ func initAdminHTTP(cfg *app.Config) (*http.Server, error) {
 }
 
 // wire.go:
+
+func initLogger() *zerolog.Logger {
+	logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
+
+	return &logger
+}
 
 func initConfig() (*app.Config, error) {
 	var config app.Config

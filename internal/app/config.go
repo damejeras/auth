@@ -8,10 +8,11 @@ type Config struct {
 		Port string `default:":9096"`
 	} `fig:"app"`
 	AWSConfig struct {
-		Region   string `validate:"required"`
-		Endpoint string `validate:"required"`
-		ID       string `validate:"required"`
-		Secret   string `validate:"required"`
+		Region     string `validate:"required"`
+		Endpoint   string `validate:"required"`
+		ID         string `validate:"required"`
+		Secret     string `validate:"required"`
+		MaxRetries int    `default:"3"`
 	} `fig:"aws"`
 	ConsentProviderConfig struct {
 		Address string `default:"http://localhost:8888/consent"`

@@ -12,8 +12,15 @@ import (
 	"github.com/damejeras/auth/internal/persistence"
 	"github.com/google/wire"
 	"github.com/kkyr/fig"
+	"github.com/rs/zerolog"
 	"net/http"
 )
+
+func initLogger() *zerolog.Logger {
+	logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
+
+	return &logger
+}
 
 func initConfig() (*app.Config, error) {
 	var config app.Config
@@ -24,7 +31,7 @@ func initConfig() (*app.Config, error) {
 	return &config, nil
 }
 
-func initOauth2HTTP(cfg *app.Config) (*http.Server, error) {
+func initOauth2HTTP(cfg *app.Config, logger *zerolog.Logger) (*http.Server, error) {
 	wire.Build(
 		oauth2.NewHTTPServer,
 		oauth2.NewServer,
@@ -40,7 +47,7 @@ func initOauth2HTTP(cfg *app.Config) (*http.Server, error) {
 	return nil, nil
 }
 
-func initAdminHTTP(cfg *app.Config) (*http.Server, error) {
+func initAdminHTTP(cfg *app.Config, logger *zerolog.Logger) (*http.Server, error) {
 	wire.Build(
 		admin.NewHTTPServer,
 		identity.NewService,

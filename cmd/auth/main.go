@@ -9,6 +9,8 @@ import (
 	"os"
 )
 
+var logger = initLogger()
+
 func main() {
 	config, err := initConfig()
 	if err != nil {
@@ -17,14 +19,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	oauth2Server, err := initOauth2HTTP(config)
+	oauth2Server, err := initOauth2HTTP(config, logger)
 	if err != nil {
 		log.Printf("init oauth2 http: %v", err)
 
 		os.Exit(1)
 	}
 
-	adminServer, err := initAdminHTTP(config)
+	adminServer, err := initAdminHTTP(config, logger)
 	if err != nil {
 		log.Printf("init admin http: %v", err)
 
