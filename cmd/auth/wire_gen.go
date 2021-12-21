@@ -42,7 +42,7 @@ func initOauth2HTTP(cfg *app.Config, logger *zerolog.Logger) (*http.Server, erro
 	}
 	identityManager := identity.NewManager(challengeRepository, consentChallengeRepository, repository, logger, cfg)
 	server := oauth2.NewServer(manager, identityManager)
-	httpServer := oauth2.NewHTTPServer(server)
+	httpServer := oauth2.NewHTTPServer(server, logger)
 	return httpServer, nil
 }
 

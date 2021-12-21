@@ -2,7 +2,6 @@ package grace
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/http"
 	"time"
@@ -14,7 +13,6 @@ func Serve(ctx context.Context, server *http.Server, listener net.Listener) erro
 	errChan := make(chan error)
 
 	go func() {
-		log.Printf("listen %q", listener.Addr().String())
 		if err := server.Serve(listener); err != nil {
 			errChan <- err
 		}
@@ -22,8 +20,6 @@ func Serve(ctx context.Context, server *http.Server, listener net.Listener) erro
 
 	select {
 	case <-ctx.Done():
-		log.Printf("shutdown %q", listener.Addr().String())
-		defer log.Printf("%q shutdown complete", listener.Addr().String())
 	case err := <-errChan:
 		return err
 	}
